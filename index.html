@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiple PDF Page-by-Page Preview with Drag and Drop</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <link rel="stylesheet" href="app.css">
+
+</head>
+<body>
+    <div id="drop-area">
+        <p>Drag and drop PDF files here, or click to select files</p>
+        <input type="file" id="fileElem" accept="application/pdf" multiple style="display:none">
+    </div>
+    <button id="combineButton">Combine PDFs</button>
+    <div id="preview-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
