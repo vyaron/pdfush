@@ -227,41 +227,28 @@ function drop(e) {
         }
         
         // Update the PDF name for the moved page
-        const newPdfName = dropzone.closest('.pdf-preview').querySelector('.pdf-title').textContent;
+        const newPdfName = dropzone.closest('.pdf-preview').querySelector('.pdf-title').textContent.split(' (')[0];
         draggableElement.querySelector('.page-preview').dataset.pdfName = newPdfName;
 
         // Update the page order
-        updatePageOrder(draggableElement.querySelector('.page-preview'), dropzone);
+        updatePageOrder();
     }
     
     document.querySelectorAll('.over').forEach(el => el.classList.remove('over'));
 }
 
-function updatePageOrder(draggedElement, dropzone) {
-    const draggedPageInfo = {
-        pdfName: draggedElement.dataset.pdfName,
-        pageNum: parseInt(draggedElement.dataset.pageNum)
-    };
-
-    // Remove the dragged page from its original position
-    const draggedIndex = pageOrder.findIndex(p => 
-        p.pdfName === draggedElement.dataset.pdfName && p.pageNum === parseInt(draggedElement.dataset.pageNum)
-    );
-    if (draggedIndex > -1) {
-        pageOrder.splice(draggedIndex, 1);
-    }
-
-    // Find the index where it should be inserted
-    const allPreviews = document.querySelectorAll('.page-preview');
-    const dropIndex = Array.from(allPreviews).indexOf(draggedElement);
-
-    // Update the pdfName if it has changed
-    const newPdfName = dropzone.closest('.pdf-preview').querySelector('.pdf-title').textContent;
-    draggedPageInfo.pdfName = newPdfName;
-
-    // Insert the page info at the new position
-    pageOrder.splice(dropIndex, 0, draggedPageInfo);
-
+function updatePageOrder() {
+    pageOrder = [];
+    document.querySelectorAll('.pdf-preview').forEach(pdfPreview => {
+        const pdfName = pdfPreview.querySelector('.pdf-title').textContent.split(' (')[0]; // Remove page count
+        pdfPreview.querySelectorAll('.page-container').forEach(pageContainer => {
+            const pagePreview = pageContainer.querySelector('.page-preview');
+            pageOrder.push({
+                pdfName: pdfName,
+                pageNum: parseInt(pagePreview.dataset.pageNum)
+            });
+        });
+    });
     console.log('Updated page order:', pageOrder); // For debugging
 }
 
@@ -276,7 +263,8 @@ async function combinePDFs() {
     const mergedPdf = await PDFDocument.create();
 
     for (const pageInfo of pageOrder) {
-        const pdfData = pdfDataStore[pageInfo.pdfName];
+        const pdfName = Object.keys(pdfDataStore).find(name => name.includes(pageInfo.pdfName));
+        const pdfData = pdfDataStore[pdfName];
         
         if (!pdfData) {
             console.error(`Original PDF data not found for ${pageInfo.pdfName}`);
@@ -576,5 +564,20 @@ async function removeFormField(indicator) {
     } catch (error) {
         console.error('Error removing form field:', error);
     }
+}
+
+function updatePageOrder() {
+    pageOrder = [];
+    document.querySelectorAll('.pdf-preview').forEach(pdfPreview => {
+        const pdfName = pdfPreview.querySelector('.pdf-title').textContent.split(' (')[0]; // Remove page count
+        pdfPreview.querySelectorAll('.page-container').forEach(pageContainer => {
+            const pagePreview = pageContainer.querySelector('.page-preview');
+            pageOrder.push({
+                pdfName: pdfName,
+                pageNum: parseInt(pagePreview.dataset.pageNum)
+            });
+        });
+    });
+    console.log('Updated page order:', pageOrder); // For debugging
 }
 
