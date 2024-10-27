@@ -1,3 +1,26 @@
+body {
+    text-align: center;
+}
+
+header {
+    background-color: #ff1b0e;
+    padding: 1em;
+}
+
+header img {
+    max-width: 40px;
+    animation: bounce 0.5s ease 3;
+    box-shadow: 10px;
+    box-shadow: 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+footer {
+    background-color: #ff1b0e;
+    margin-top: 3em;
+    border-top: 1px solid gray;
+    padding: 1em;
+}
+
 #drop-area {
     border: 2px dashed #ccc;
     border-radius: 20px;
@@ -5,34 +28,42 @@
     padding: 20px;
     text-align: center;
     margin: 20px auto;
+    cursor: pointer;
 }
+
 #drop-area.highlight {
     border-color: purple;
 }
+
 .pdf-preview {
     margin: 20px 0;
     padding: 20px;
     border: 1px solid #ddd;
     border-radius: 10px;
 }
+
 .pdf-title {
     font-weight: bold;
     margin-bottom: 10px;
 }
+
 .page-previews {
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-start;
     min-height: 100px;
 }
+
 .page-preview {
     margin: 10px;
     border: 1px solid #ddd;
     cursor: move;
 }
+
 .page-preview.dragging {
     opacity: 0.5;
 }
+
 .page-preview.over {
     border: 2px dashed #000;
 }
@@ -86,7 +117,7 @@
     width: 100%;
     height: 100%;
     overflow: auto;
-    background-color: rgba(0,0,0,0.9);
+    background-color: rgba(0, 0, 0, 0.9);
 }
 
 .modal-content {
@@ -152,4 +183,16 @@
 
 .rotate-button {
     right: 65px;
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
 }

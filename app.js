@@ -6,6 +6,19 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 let pdfDataStore = {};
 let pageOrder = [];
 
+
+document.addEventListener('DOMContentLoaded', () => {
+    const headerImg = document.querySelector('header img');
+    if (headerImg) {
+        headerImg.classList.add('header-img-animate');
+
+        // Remove the animation class after it completes
+        headerImg.addEventListener('animationend', () => {
+            headerImg.classList.remove('header-img-animate');
+        });
+    }
+});
+
 const dropArea = document.getElementById('drop-area');
 const fileElem = document.getElementById('fileElem');
 const previewContainer = document.getElementById('preview-container');
@@ -68,26 +81,26 @@ function previewFile(file) {
     const reader = new FileReader();
     reader.readAsArrayBuffer(file);
 
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         const pdfData = new Uint8Array(e.target.result);
         pdfDataStore[file.name] = pdfData;
 
-        pdfjsLib.getDocument(pdfData).promise.then(function(pdf) {
+        pdfjsLib.getDocument(pdfData).promise.then(function (pdf) {
             const pdfPreview = document.createElement('div');
             pdfPreview.className = 'pdf-preview';
-            
+
             const pdfHeader = document.createElement('div');
             pdfHeader.className = 'pdf-header';
-            
+
             const pdfTitle = document.createElement('div');
             pdfTitle.className = 'pdf-title';
             pdfTitle.textContent = `${file.name} (${pdf.numPages} pages)`;
-            
+
             const collapseButton = document.createElement('button');
             collapseButton.className = 'collapse-button';
             collapseButton.textContent = '▼';
             collapseButton.onclick = () => toggleCollapse(pdfPreview);
-            
+
             pdfHeader.appendChild(pdfTitle);
             pdfHeader.appendChild(collapseButton);
             pdfPreview.appendChild(pdfHeader);
@@ -99,7 +112,7 @@ function previewFile(file) {
             previewContainer.appendChild(pdfPreview);
 
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                pdf.getPage(pageNum).then(function(page) {
+                pdf.getPage(pageNum).then(function (page) {
                     const scale = 0.2;
                     const viewport = page.getViewport({ scale: scale });
 
@@ -226,17 +239,17 @@ function drop(e) {
     }
     const pageNum = data.pageNum;
     const sourcePdfName = data.pdfName;
-    
+
     const draggableElement = document.querySelector(`.page-container .page-preview[data-page-num="${pageNum}"][data-pdf-name="${sourcePdfName}"]`).closest('.page-container');
     const dropzone = e.target.closest('.page-previews');
-    
+
     if (dropzone && draggableElement) {
         if (e.target.closest('.page-container')) {
             dropzone.insertBefore(draggableElement, e.target.closest('.page-container'));
         } else {
             dropzone.appendChild(draggableElement);
         }
-        
+
         // Update the PDF name for the moved page
         const newPdfName = dropzone.closest('.pdf-preview').querySelector('.pdf-title').textContent.split(' (')[0];
         draggableElement.querySelector('.page-preview').dataset.pdfName = newPdfName;
@@ -244,7 +257,7 @@ function drop(e) {
         // Update the page order
         updatePageOrder();
     }
-    
+
     document.querySelectorAll('.over').forEach(el => el.classList.remove('over'));
 }
 
@@ -276,7 +289,7 @@ async function combinePDFs() {
     for (const pageInfo of pageOrder) {
         const pdfName = Object.keys(pdfDataStore).find(name => name.includes(pageInfo.pdfName));
         const pdfData = pdfDataStore[pdfName];
-        
+
         if (!pdfData) {
             console.error(`Original PDF data not found for ${pageInfo.pdfName}`);
             continue;
@@ -284,11 +297,11 @@ async function combinePDFs() {
 
         const sourceDoc = await PDFDocument.load(pdfData);
         const [copiedPage] = await mergedPdf.copyPages(sourceDoc, [pageInfo.pageNum - 1]);
-        
+
         if (pageInfo.rotation) {
             copiedPage.setRotation(degrees(pageInfo.rotation));
         }
-        
+
         mergedPdf.addPage(copiedPage);
     }
 
@@ -338,7 +351,7 @@ async function showFullPage(pdfName, pageNum) {
     }
 
     try {
-        const pdf = await pdfjsLib.getDocument({data: pdfData}).promise;
+        const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
         const page = await pdf.getPage(parseInt(pageNum));
         const scale = 2;
         const viewport = page.getViewport({ scale: scale });
@@ -407,7 +420,7 @@ function createFieldButton(text, onClick) {
 function toggleCollapse(pdfPreview) {
     const pagePreviews = pdfPreview.querySelector('.page-previews');
     const collapseButton = pdfPreview.querySelector('.collapse-button');
-    
+
     if (pagePreviews.style.display === 'none') {
         pagePreviews.style.display = 'flex';
         collapseButton.textContent = '▼';
@@ -468,7 +481,7 @@ async function addFormFields(pdfName, pageIndex) {
 
         // Re-render the preview
         const pdfPreviews = document.querySelectorAll('.pdf-preview');
-        const pdfPreview = Array.from(pdfPreviews).find(preview => 
+        const pdfPreview = Array.from(pdfPreviews).find(preview =>
             preview.querySelector('.pdf-title').textContent.includes(pdfName)
         );
 
@@ -508,7 +521,7 @@ function createFieldIndicator(fieldType, x, y) {
     indicator.textContent = fieldType.charAt(0).toUpperCase() + fieldType.slice(1);
     indicator.style.left = `${x}px`;
     indicator.style.top = `${y}px`;
-    
+
     const removeButton = document.createElement('span');
     removeButton.className = 'remove-field';
     removeButton.textContent = '×';
@@ -517,7 +530,7 @@ function createFieldIndicator(fieldType, x, y) {
         indicator.remove();
         // Here you would also remove the field from the PDF
     };
-    
+
     indicator.appendChild(removeButton);
     return indicator;
 }
@@ -612,7 +625,7 @@ function rotatePage(pageContainer, pdfName, pageNum) {
     }
 
     console.log(`Rotated page ${pageNum} of ${pdfName} to ${currentRotation} degrees`);
-    
+
     // Update the PDF in pdfDataStore
     updatePDFRotation(pdfName, pageNum, currentRotation);
 }
@@ -628,7 +641,7 @@ async function updatePDFRotation(pdfName, pageNum, rotation) {
         const pdfDoc = await PDFDocument.load(pdfData);
         const pages = pdfDoc.getPages();
         const page = pages[pageNum - 1];
-        
+
         page.setRotation(degrees(rotation));
 
         const modifiedPdfBytes = await pdfDoc.save();
