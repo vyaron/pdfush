@@ -1,4 +1,4 @@
-const { PDFDocument, rgb } = PDFLib;
+const { PDFDocument, rgb, degrees } = PDFLib;
 
 // Set up the worker source for PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.worker.min.js';
@@ -143,8 +143,19 @@ function previewFile(file) {
                         showFullPage(file.name, pageNum);
                     };
 
+                    // Create rotate button
+                    const rotateButton = document.createElement('button');
+                    rotateButton.className = 'mini-button rotate-button';
+                    rotateButton.innerHTML = '🔄';
+                    rotateButton.title = 'Rotate page';
+                    rotateButton.onclick = (e) => {
+                        e.stopPropagation();
+                        rotatePage(pageContainer, file.name, pageNum);
+                    };
+
                     pageContainer.appendChild(deleteButton);
                     pageContainer.appendChild(fullViewButton);
+                    pageContainer.appendChild(rotateButton);
 
                     // Note: There should be no add-form-field button here
 
@@ -273,6 +284,11 @@ async function combinePDFs() {
 
         const sourceDoc = await PDFDocument.load(pdfData);
         const [copiedPage] = await mergedPdf.copyPages(sourceDoc, [pageInfo.pageNum - 1]);
+        
+        if (pageInfo.rotation) {
+            copiedPage.setRotation(degrees(pageInfo.rotation));
+        }
+        
         mergedPdf.addPage(copiedPage);
     }
 
@@ -579,5 +595,48 @@ function updatePageOrder() {
         });
     });
     console.log('Updated page order:', pageOrder); // For debugging
+}
+
+function rotatePage(pageContainer, pdfName, pageNum) {
+    const canvas = pageContainer.querySelector('.page-preview');
+    let currentRotation = parseInt(canvas.dataset.rotation || '0');
+    currentRotation = (currentRotation + 90) % 360;
+    canvas.dataset.rotation = currentRotation;
+
+    canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+    // Update the rotation in the pageOrder array
+    const pageIndex = pageOrder.findIndex(p => p.pdfName === pdfName && p.pageNum === parseInt(pageNum));
+    if (pageIndex > -1) {
+        pageOrder[pageIndex].rotation = currentRotation;
+    }
+
+    console.log(`Rotated page ${pageNum} of ${pdfName} to ${currentRotation} degrees`);
+    
+    // Update the PDF in pdfDataStore
+    updatePDFRotation(pdfName, pageNum, currentRotation);
+}
+
+async function updatePDFRotation(pdfName, pageNum, rotation) {
+    const pdfData = pdfDataStore[pdfName];
+    if (!pdfData) {
+        console.error(`PDF data not found for ${pdfName}`);
+        return;
+    }
+
+    try {
+        const pdfDoc = await PDFDocument.load(pdfData);
+        const pages = pdfDoc.getPages();
+        const page = pages[pageNum - 1];
+        
+        page.setRotation(degrees(rotation));
+
+        const modifiedPdfBytes = await pdfDoc.save();
+        pdfDataStore[pdfName] = modifiedPdfBytes;
+
+        console.log(`Updated rotation for page ${pageNum} of ${pdfName} in pdfDataStore`);
+    } catch (error) {
+        console.error('Error updating PDF rotation:', error);
+    }
 }
 

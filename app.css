@@ -149,3 +149,7 @@
 .field-indicator:hover .remove-field {
     display: inline;
 }
+
+.rotate-button {
+    right: 65px;
+}
