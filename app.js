@@ -65,6 +65,8 @@ function handleDrop(e) {
 }
 
 function handleFiles(files) {
+    document.querySelector('#combineButton').disabled = false
+
     if (files instanceof FileList) {
         ([...files]).forEach(previewFile);
     } else if (files.target && files.target.files) {
@@ -237,6 +239,7 @@ function drop(e) {
         console.error('Error parsing drag data:', error);
         return;
     }
+    
     const pageNum = data.pageNum;
     const sourcePdfName = data.pdfName;
 
