@@ -102,16 +102,53 @@ function handlePdfFile(file) {
             const pdfHeader = document.createElement('div')
             pdfHeader.className = 'pdf-header'
 
+            // Create title container
+            const titleContainer = document.createElement('div')
+            titleContainer.className = 'title-container'
+
+            // Create editable title div
             const pdfTitle = document.createElement('div')
             pdfTitle.className = 'pdf-title'
-            pdfTitle.textContent = `${file.name} (${pdf.numPages} pages)`
+            pdfTitle.contentEditable = true
+            pdfTitle.dataset.originalName = file.name
+            pdfTitle.textContent = file.name
+
+            // Create separate page count span
+            const pageCount = document.createElement('span')
+            pageCount.className = 'page-count'
+            updatePageCount(pageCount, pdf.numPages)
+
+            // Add blur event for title editing
+            pdfTitle.addEventListener('blur', () => {
+                const newName = pdfTitle.textContent.trim()
+                if (newName && newName !== file.name) {
+                    const oldName = file.name
+                    updatePdfName(oldName, newName, pdfPreview)
+                }
+            })
+
+            // Add key events for better editing experience
+            pdfTitle.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault()
+                    pdfTitle.blur()
+                }
+                if (e.key === 'Escape') {
+                    e.preventDefault()
+                    pdfTitle.textContent = pdfTitle.dataset.originalName
+                    pdfTitle.blur()
+                }
+            })
+
+            titleContainer.appendChild(pdfTitle)
+            titleContainer.appendChild(pageCount)
 
             const collapseButton = document.createElement('button')
             collapseButton.className = 'collapse-button'
             collapseButton.textContent = '▼'
             collapseButton.onclick = () => toggleCollapse(pdfPreview)
 
-            pdfHeader.appendChild(pdfTitle)
+            pdfHeader.appendChild(titleContainer)
             pdfHeader.appendChild(collapseButton)
             pdfPreview.appendChild(pdfHeader)
 
@@ -327,6 +364,8 @@ async function combinePDFs() {
 document.getElementById('combineButton').addEventListener('click', combinePDFs)
 
 function deletePage(pageContainer, pdfName, pageNum) {
+    const pdfPreview = pageContainer.closest('.pdf-preview')
+    
     // Remove the page from the DOM
     pageContainer.remove()
 
@@ -336,21 +375,17 @@ function deletePage(pageContainer, pdfName, pageNum) {
         pageOrder.splice(index, 1)
     }
 
-    // Remove the page from pdfDataStore
-    if (pdfDataStore[pdfName]) {
-        // Note: This doesn't actually modify the PDF, just our local representation
-        console.log(`Removed page ${pageNum} from ${pdfName} in local storage`)
-    }
-
-    console.log('Updated page order:', pageOrder)
+    // Update page count in title
+    updatePdfPageCounts(pdfPreview)
 
     // If this was the last page of the PDF, remove the entire PDF preview
-    const pdfPreview = pageContainer.closest('.pdf-preview')
-    if (pdfPreview && pdfPreview.querySelectorAll('.page-container').length === 0) {
+    if (pdfPreview.querySelectorAll('.page-container').length === 0) {
         pdfPreview.remove()
         delete pdfDataStore[pdfName]
         console.log(`Removed entire PDF: ${pdfName}`)
     }
+
+    console.log('Updated page order:', pageOrder)
 }
 
 async function showFullPage(pdfName, pageNum) {
@@ -809,7 +844,9 @@ function drop(e) {
     const dropzone = e.target.closest('.page-previews')
 
     if (dropzone && draggableElement) {
-        const targetPdfName = dropzone.closest('.pdf-preview').querySelector('.pdf-title').textContent.split(' (')[0]
+        const targetPdfPreview = dropzone.closest('.pdf-preview')
+        const sourcePdfPreview = draggableElement.closest('.pdf-preview')
+        const targetPdfName = targetPdfPreview.querySelector('.pdf-title').textContent.split(' (')[0]
         
         if (e.target.closest('.page-container')) {
             dropzone.insertBefore(draggableElement, e.target.closest('.page-container'))
@@ -827,9 +864,48 @@ function drop(e) {
         const pagePreview = draggableElement.querySelector('.page-preview')
         pagePreview.dataset.pdfName = targetPdfName
         
+        // Update page counts in titles
+        updatePdfPageCounts(sourcePdfPreview)
+        if (sourcePdfPreview !== targetPdfPreview) {
+            updatePdfPageCounts(targetPdfPreview)
+        }
+        
         updatePageOrder()
     }
 
     document.querySelectorAll('.over').forEach(el => el.classList.remove('over'))
+}
+
+function updatePdfPageCounts(pdfPreview) {
+    if (!pdfPreview) return
+    
+    const pageCount = pdfPreview.querySelector('.page-count')
+    const count = pdfPreview.querySelectorAll('.page-container').length
+    updatePageCount(pageCount, count)
+}
+
+function updatePageCount(pageCountElement, count) {
+    pageCountElement.textContent = `(${count} pages)`
+}
+
+function updatePdfName(oldName, newName, pdfPreview) {
+    // Update pdfDataStore
+    pdfDataStore[newName] = pdfDataStore[oldName]
+    delete pdfDataStore[oldName]
+
+    // Update all page previews in this PDF
+    const pagePreviews = pdfPreview.querySelectorAll('.page-preview')
+    pagePreviews.forEach(preview => {
+        preview.dataset.pdfName = newName
+    })
+
+    // Update pageOrder array
+    pageOrder.forEach(page => {
+        if (page.pdfName === oldName) {
+            page.pdfName = newName
+        }
+    })
+
+    console.log(`Renamed PDF from "${oldName}" to "${newName}"`)
 }
 

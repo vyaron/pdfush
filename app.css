@@ -212,6 +212,49 @@ footer {
     margin: 1rem 0;
 }
 
+.pdf-title {
+    padding: 2px 5px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    min-width: 100px;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pdf-title:hover {
+    background-color: #f5f5f5;
+    border-color: #ddd;
+}
+
+.pdf-title:focus {
+    background-color: #fff;
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0,123,255,.25);
+}
+
+.page-count {
+    color: #666;
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+.pdf-header {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    gap: 8px;
+}
+
+.title-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
 @keyframes bounce {
 
     0%,
