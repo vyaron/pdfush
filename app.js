@@ -75,19 +75,27 @@ function handleFiles(files) {
 }
 
 function previewFile(file) {
-    if (file.type !== 'application/pdf') {
-        console.error('Not a PDF file!')
+    const supportedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    
+    if (file.type === 'application/pdf') {
+        handlePdfFile(file)
+    } else if (supportedImageTypes.includes(file.type)) {
+        handleImageFile(file)
+    } else {
+        console.error('Unsupported file type:', file.type)
         return
     }
+}
 
+function handlePdfFile(file) {
     const reader = new FileReader()
     reader.readAsArrayBuffer(file)
 
-    reader.onload = function (e) {
+    reader.onload = function(e) {
         const pdfData = new Uint8Array(e.target.result)
         pdfDataStore[file.name] = pdfData
 
-        pdfjsLib.getDocument(pdfData).promise.then(function (pdf) {
+        pdfjsLib.getDocument(pdfData).promise.then(function(pdf) {
             const pdfPreview = document.createElement('div')
             pdfPreview.className = 'pdf-preview'
 
@@ -114,7 +122,7 @@ function previewFile(file) {
             previewContainer.appendChild(pdfPreview)
 
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                pdf.getPage(pageNum).then(function (page) {
+                pdf.getPage(pageNum).then(function(page) {
                     const scale = 0.2
                     const viewport = page.getViewport({ scale: scale })
 
@@ -172,8 +180,6 @@ function previewFile(file) {
                     pageContainer.appendChild(fullViewButton)
                     pageContainer.appendChild(rotateButton)
 
-                    // Note: There should be no add-form-field button here
-
                     pagePreviews.appendChild(pageContainer)
 
                     // Add page to pageOrder
@@ -189,84 +195,87 @@ function previewFile(file) {
     }
 }
 
-function addDragDropListeners(element) {
-    element.setAttribute('draggable', 'true')
-    element.addEventListener('dragstart', dragStart)
-    element.addEventListener('dragend', dragEnd)
-}
+async function handleImageFile(file) {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
 
-function addContainerDropListeners(container) {
-    container.addEventListener('dragover', dragOver)
-    container.addEventListener('dragenter', dragEnter)
-    container.addEventListener('dragleave', dragLeave)
-    container.addEventListener('drop', drop)
-}
-
-function dragStart(e) {
-    const pageContainer = e.target.closest('.page-container')
-    e.dataTransfer.setData('text/plain', JSON.stringify({
-        pageNum: pageContainer.querySelector('.page-preview').dataset.pageNum,
-        pdfName: pageContainer.querySelector('.page-preview').dataset.pdfName
-    }))
-    pageContainer.classList.add('dragging')
-}
-
-function dragEnd(e) {
-    e.target.classList.remove('dragging')
-}
-
-function dragOver(e) {
-    e.preventDefault()
-}
-
-function dragEnter(e) {
-    e.preventDefault()
-    if (e.target.classList.contains('page-preview')) {
-        e.target.classList.add('over')
-    }
-}
-
-function dragLeave(e) {
-    e.target.classList.remove('over')
-}
-
-function drop(e) {
-    e.preventDefault()
-    let data
     try {
-        data = JSON.parse(e.dataTransfer.getData('text'))
-    } catch (error) {
-        console.error('Error parsing drag data:', error)
-        return
-    }
-    
-    const pageNum = parseInt(data.pageNum)
-    const sourcePdfName = data.pdfName
+        const imageData = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result)
+            reader.onerror = reject
+        })
 
-    const draggableElement = document.querySelector(`.page-container .page-preview[data-page-num="${pageNum}"][data-pdf-name="${sourcePdfName}"]`).closest('.page-container')
-    const dropzone = e.target.closest('.page-previews')
-
-    if (dropzone && draggableElement) {
-        const targetPdfName = dropzone.closest('.pdf-preview').querySelector('.pdf-title').textContent.split(' (')[0]
+        // Create a PDF from the image
+        const pdfDoc = await PDFDocument.create()
         
-        if (e.target.closest('.page-container')) {
-            dropzone.insertBefore(draggableElement, e.target.closest('.page-container'))
+        // Load the image based on its type
+        let image
+        if (file.type === 'image/jpeg') {
+            image = await pdfDoc.embedJpg(imageData)
+        } else if (file.type === 'image/png') {
+            image = await pdfDoc.embedPng(imageData)
         } else {
-            dropzone.appendChild(draggableElement)
+            // For other formats, convert to PNG first
+            const pngData = await convertImageToPng(imageData)
+            image = await pdfDoc.embedPng(pngData)
         }
 
-        // Store original page information
-        draggableElement.dataset.originalPdfName = sourcePdfName
-        draggableElement.dataset.originalPageNum = pageNum
-
-        // Update the page preview's dataset
-        const pagePreview = draggableElement.querySelector('.page-preview')
-        pagePreview.dataset.pdfName = targetPdfName
+        // Use standard A4 page size (595.28 x 841.89 points)
+        const page = pdfDoc.addPage([595.28, 841.89])
+        const { width, height } = image
         
-        updatePageOrder()
-    }
+        // Calculate scaling to fit the image within the page while maintaining aspect ratio
+        const pageWidth = page.getWidth()
+        const pageHeight = page.getHeight()
+        
+        let scaledWidth = pageWidth - 40 // 20pt margin on each side
+        let scaledHeight = (height * scaledWidth) / width
+        
+        // If height exceeds page height, scale based on height instead
+        if (scaledHeight > pageHeight - 40) {
+            scaledHeight = pageHeight - 40 // 20pt margin on top and bottom
+            scaledWidth = (width * scaledHeight) / height
+        }
+        
+        // Center the image on the page
+        const x = (pageWidth - scaledWidth) / 2
+        const y = (pageHeight - scaledHeight) / 2
 
-    document.querySelectorAll('.over').forEach(el => el.classList.remove('over'))
+        // Draw the image
+        page.drawImage(image, {
+            x,
+            y,
+            width: scaledWidth,
+            height: scaledHeight
+        })
+
+        // Convert to PDF bytes and create a virtual PDF file
+        const pdfBytes = await pdfDoc.save()
+        const pdfName = `${file.name}.pdf`
+        const pdfFile = new File([pdfBytes], pdfName, { type: 'application/pdf' })
+        
+        // Use existing PDF preview function
+        previewFile(pdfFile)
+        
+    } catch (error) {
+        console.error('Error processing image:', error)
+    }
+}
+
+// Helper function for converting other image formats to PNG
+function convertImageToPng(imageData) {
+    return new Promise((resolve) => {
+        const tempImage = new Image()
+        tempImage.src = imageData
+        tempImage.onload = () => {
+            const canvas = document.createElement('canvas')
+            canvas.width = tempImage.width
+            canvas.height = tempImage.height
+            const ctx = canvas.getContext('2d')
+            ctx.drawImage(tempImage, 0, 0)
+            resolve(canvas.toDataURL('image/png'))
+        }
+    })
 }
 
 // Update the combinePDFs function
@@ -280,20 +289,21 @@ async function combinePDFs() {
 
     for (const pageContainer of document.querySelectorAll('.page-container')) {
         const pagePreview = pageContainer.querySelector('.page-preview')
-        const originalPdfName = pageContainer.dataset.originalPdfName || pagePreview.dataset.pdfName
-        const originalPageNum = parseInt(pageContainer.dataset.originalPageNum || pagePreview.dataset.pageNum)
+        // Use original source information if available, otherwise use current
+        const sourcePdfName = pageContainer.dataset.originalPdfName || pagePreview.dataset.pdfName
+        const sourcePageNum = parseInt(pageContainer.dataset.originalPageNum || pagePreview.dataset.pageNum)
         const rotation = parseInt(pagePreview.dataset.rotation || '0')
         
-        const pdfData = pdfDataStore[originalPdfName]
+        const pdfData = pdfDataStore[sourcePdfName]
         
         if (!pdfData) {
-            console.error(`Original PDF data not found for ${originalPdfName}`)
+            console.error(`Original PDF data not found for ${sourcePdfName}`)
             continue
         }
 
         try {
             const sourceDoc = await PDFDocument.load(pdfData)
-            const [copiedPage] = await mergedPdf.copyPages(sourceDoc, [originalPageNum - 1])
+            const [copiedPage] = await mergedPdf.copyPages(sourceDoc, [sourcePageNum - 1])
             
             if (rotation) {
                 copiedPage.setRotation(degrees(rotation))
@@ -301,7 +311,7 @@ async function combinePDFs() {
             
             mergedPdf.addPage(copiedPage)
         } catch (error) {
-            console.error(`Error processing page ${originalPageNum} from ${originalPdfName}:`, error)
+            console.error(`Error processing page ${sourcePageNum} from ${sourcePdfName}:`, error)
         }
     }
 
@@ -660,5 +670,87 @@ async function updatePDFRotation(pdfName, pageNum, rotation) {
     } catch (error) {
         console.error('Error updating PDF rotation:', error)
     }
+}
+
+function addDragDropListeners(element) {
+    element.setAttribute('draggable', 'true')
+    element.addEventListener('dragstart', dragStart)
+    element.addEventListener('dragend', dragEnd)
+}
+
+function addContainerDropListeners(container) {
+    container.addEventListener('dragover', dragOver)
+    container.addEventListener('dragenter', dragEnter)
+    container.addEventListener('dragleave', dragLeave)
+    container.addEventListener('drop', drop)
+}
+
+function dragStart(e) {
+    const pageContainer = e.target.closest('.page-container')
+    e.dataTransfer.setData('text/plain', JSON.stringify({
+        pageNum: pageContainer.querySelector('.page-preview').dataset.pageNum,
+        pdfName: pageContainer.querySelector('.page-preview').dataset.pdfName
+    }))
+    pageContainer.classList.add('dragging')
+}
+
+function dragEnd(e) {
+    e.target.classList.remove('dragging')
+}
+
+function dragOver(e) {
+    e.preventDefault()
+}
+
+function dragEnter(e) {
+    e.preventDefault()
+    if (e.target.classList.contains('page-preview')) {
+        e.target.classList.add('over')
+    }
+}
+
+function dragLeave(e) {
+    e.target.classList.remove('over')
+}
+
+function drop(e) {
+    e.preventDefault()
+    let data
+    try {
+        data = JSON.parse(e.dataTransfer.getData('text'))
+    } catch (error) {
+        console.error('Error parsing drag data:', error)
+        return
+    }
+    
+    const pageNum = parseInt(data.pageNum)
+    const sourcePdfName = data.pdfName
+
+    const draggableElement = document.querySelector(`.page-container .page-preview[data-page-num="${pageNum}"][data-pdf-name="${sourcePdfName}"]`).closest('.page-container')
+    const dropzone = e.target.closest('.page-previews')
+
+    if (dropzone && draggableElement) {
+        const targetPdfName = dropzone.closest('.pdf-preview').querySelector('.pdf-title').textContent.split(' (')[0]
+        
+        if (e.target.closest('.page-container')) {
+            dropzone.insertBefore(draggableElement, e.target.closest('.page-container'))
+        } else {
+            dropzone.appendChild(draggableElement)
+        }
+
+        // Store original source information
+        if (!draggableElement.dataset.originalPdfName) {
+            draggableElement.dataset.originalPdfName = sourcePdfName
+            draggableElement.dataset.originalPageNum = pageNum
+        }
+
+        // Update the current PDF name in the preview's dataset
+        const pagePreview = draggableElement.querySelector('.page-preview')
+        pagePreview.dataset.pdfName = targetPdfName
+        
+        updatePageOrder()
+    }
+
+    document.querySelectorAll('.over').forEach(el => el.classList.remove('over'))
 }
 

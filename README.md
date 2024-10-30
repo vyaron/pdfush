@@ -1,13 +1,11 @@
-
 # Edit and Combine your PDFs
 [Check it out](https://vyaron.github.io/pdfush/)
 
-
 ## Features
 
-🔄 **Drag & Drop PDF Files**
-- Easy drag and drop interface for uploading PDFs
-- Support for multiple PDF files
+🔄 **Drag & Drop Files**
+- Easy drag and drop interface for uploading PDFs and images
+- Support for multiple PDFs and common image formats (JPG, PNG)
 - Visual feedback during file upload
 
 📄 **PDF Management**
@@ -16,9 +14,10 @@
 - Remove unwanted pages
 - Rotate pages as needed
 
-🔨 **PDF Processing**
-- Combine multiple PDFs into a single document
-- Preserve original PDF quality
+🔨 **File Processing**
+- Combine multiple PDFs and images into a single document
+- Convert images to PDF format automatically
+- Preserve original quality
 - Fast client-side processing
 - No file size limits
 
