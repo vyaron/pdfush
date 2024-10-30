@@ -24,17 +24,17 @@ const fileElem = document.getElementById('fileElem')
 const previewContainer = document.getElementById('preview-container')
 
 // Prevent default drag behaviors
-['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
     dropArea.addEventListener(eventName, preventDefaults, false)
     document.body.addEventListener(eventName, preventDefaults, false)
 })
 
 // Highlight drop area when item is dragged over it
-['dragenter', 'dragover'].forEach(eventName => {
+;['dragenter', 'dragover'].forEach(eventName => {
     dropArea.addEventListener(eventName, highlight, false)
 })
 
-['dragleave', 'drop'].forEach(eventName => {
+;['dragleave', 'drop'].forEach(eventName => {
     dropArea.addEventListener(eventName, unhighlight, false)
 })
 
@@ -240,24 +240,29 @@ function drop(e) {
         return
     }
     
-    const pageNum = data.pageNum
+    const pageNum = parseInt(data.pageNum)
     const sourcePdfName = data.pdfName
 
     const draggableElement = document.querySelector(`.page-container .page-preview[data-page-num="${pageNum}"][data-pdf-name="${sourcePdfName}"]`).closest('.page-container')
     const dropzone = e.target.closest('.page-previews')
 
     if (dropzone && draggableElement) {
+        const targetPdfName = dropzone.closest('.pdf-preview').querySelector('.pdf-title').textContent.split(' (')[0]
+        
         if (e.target.closest('.page-container')) {
             dropzone.insertBefore(draggableElement, e.target.closest('.page-container'))
         } else {
             dropzone.appendChild(draggableElement)
         }
 
-        // Update the PDF name for the moved page
-        const newPdfName = dropzone.closest('.pdf-preview').querySelector('.pdf-title').textContent.split(' (')[0]
-        draggableElement.querySelector('.page-preview').dataset.pdfName = newPdfName
+        // Store original page information
+        draggableElement.dataset.originalPdfName = sourcePdfName
+        draggableElement.dataset.originalPageNum = pageNum
 
-        // Update the page order
+        // Update the page preview's dataset
+        const pagePreview = draggableElement.querySelector('.page-preview')
+        pagePreview.dataset.pdfName = targetPdfName
+        
         updatePageOrder()
     }
 
@@ -273,23 +278,31 @@ async function combinePDFs() {
 
     const mergedPdf = await PDFDocument.create()
 
-    for (const pageInfo of pageOrder) {
-        const pdfName = Object.keys(pdfDataStore).find(name => name.includes(pageInfo.pdfName))
-        const pdfData = pdfDataStore[pdfName]
-
+    for (const pageContainer of document.querySelectorAll('.page-container')) {
+        const pagePreview = pageContainer.querySelector('.page-preview')
+        const originalPdfName = pageContainer.dataset.originalPdfName || pagePreview.dataset.pdfName
+        const originalPageNum = parseInt(pageContainer.dataset.originalPageNum || pagePreview.dataset.pageNum)
+        const rotation = parseInt(pagePreview.dataset.rotation || '0')
+        
+        const pdfData = pdfDataStore[originalPdfName]
+        
         if (!pdfData) {
-            console.error(`Original PDF data not found for ${pageInfo.pdfName}`)
+            console.error(`Original PDF data not found for ${originalPdfName}`)
             continue
         }
 
-        const sourceDoc = await PDFDocument.load(pdfData)
-        const [copiedPage] = await mergedPdf.copyPages(sourceDoc, [pageInfo.pageNum - 1])
-
-        if (pageInfo.rotation) {
-            copiedPage.setRotation(degrees(pageInfo.rotation))
+        try {
+            const sourceDoc = await PDFDocument.load(pdfData)
+            const [copiedPage] = await mergedPdf.copyPages(sourceDoc, [originalPageNum - 1])
+            
+            if (rotation) {
+                copiedPage.setRotation(degrees(rotation))
+            }
+            
+            mergedPdf.addPage(copiedPage)
+        } catch (error) {
+            console.error(`Error processing page ${originalPageNum} from ${originalPdfName}:`, error)
         }
-
-        mergedPdf.addPage(copiedPage)
     }
 
     const pdfBytes = await mergedPdf.save()
@@ -583,18 +596,27 @@ async function removeFormField(indicator) {
 }
 
 function updatePageOrder() {
+    // Clear the existing page order
     pageOrder = []
+    
+    // Rebuild the page order by iterating through all PDF previews
     document.querySelectorAll('.pdf-preview').forEach(pdfPreview => {
-        const pdfName = pdfPreview.querySelector('.pdf-title').textContent.split(' (')[0] // Remove page count
+        const pdfName = pdfPreview.querySelector('.pdf-title').textContent.split(' (')[0]
+        
         pdfPreview.querySelectorAll('.page-container').forEach(pageContainer => {
             const pagePreview = pageContainer.querySelector('.page-preview')
+            const rotation = parseInt(pagePreview.dataset.rotation || '0')
+            const pageNum = parseInt(pagePreview.dataset.pageNum)
+            
             pageOrder.push({
                 pdfName: pdfName,
-                pageNum: parseInt(pagePreview.dataset.pageNum)
+                pageNum: pageNum,
+                rotation: rotation
             })
         })
     })
-    console.log('Updated page order:', pageOrder) // For debugging
+    
+    console.log('Updated page order:', JSON.stringify(pageOrder, null, 2))
 }
 
 function rotatePage(pageContainer, pdfName, pageNum) {
