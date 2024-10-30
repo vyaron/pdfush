@@ -362,21 +362,40 @@ async function showFullPage(pdfName, pageNum) {
 
     try {
         const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise
-        const page = await pdf.getPage(parseInt(pageNum))
-        const scale = 2
-        const viewport = page.getViewport({ scale: scale })
+        
+        // Get actual available pages from the current DOM structure
+        const pdfPreview = Array.from(document.querySelectorAll('.pdf-preview'))
+            .find(preview => preview.querySelector('.pdf-title').textContent.includes(pdfName))
+        const availablePages = Array.from(pdfPreview.querySelectorAll('.page-preview'))
+            .map(preview => parseInt(preview.dataset.pageNum))
+            .sort((a, b) => a - b)
 
-        const canvas = document.createElement('canvas')
-        const context = canvas.getContext('2d')
-        canvas.height = viewport.height
-        canvas.width = viewport.width
-
-        const renderContext = {
-            canvasContext: context,
-            viewport: viewport
+        if (!availablePages.includes(parseInt(pageNum))) {
+            console.error('Page no longer exists')
+            return
         }
 
-        await page.render(renderContext).promise
+        let currentPageIndex = availablePages.indexOf(parseInt(pageNum))
+        let currentPage = availablePages[currentPageIndex]
+
+        const renderPage = async (pageNumber) => {
+            const page = await pdf.getPage(pageNumber)
+            const scale = 2
+            const viewport = page.getViewport({ scale: scale })
+
+            const canvas = document.createElement('canvas')
+            const context = canvas.getContext('2d')
+            canvas.height = viewport.height
+            canvas.width = viewport.width
+
+            const renderContext = {
+                canvasContext: context,
+                viewport: viewport
+            }
+
+            await page.render(renderContext).promise
+            return canvas
+        }
 
         const modal = document.createElement('div')
         modal.className = 'modal'
@@ -389,28 +408,88 @@ async function showFullPage(pdfName, pageNum) {
         closeBtn.innerHTML = '&times'
         closeBtn.onclick = () => modal.style.display = 'none'
 
-        const img = document.createElement('img')
-        img.src = canvas.toDataURL('image/png')
-        img.style.width = '100%'
+        // Add navigation buttons container
+        const navContainer = document.createElement('div')
+        navContainer.className = 'nav-buttons'
+        
+        const prevBtn = document.createElement('button')
+        prevBtn.textContent = '← Previous'
+        prevBtn.disabled = currentPageIndex === 0
+        
+        const pageInfo = document.createElement('span')
+        pageInfo.className = 'page-info'
+        pageInfo.textContent = `Page ${currentPage} of ${pdf.numPages} (${availablePages.length} remaining)`
+        
+        const nextBtn = document.createElement('button')
+        nextBtn.textContent = 'Next →'
+        nextBtn.disabled = currentPageIndex === availablePages.length - 1
+
+        navContainer.appendChild(prevBtn)
+        navContainer.appendChild(pageInfo)
+        navContainer.appendChild(nextBtn)
+
+        const imgContainer = document.createElement('div')
+        imgContainer.className = 'img-container'
+        
+        const updatePreview = async (newPageIndex) => {
+            currentPageIndex = newPageIndex;
+            currentPage = availablePages[currentPageIndex];
+            const canvas = await renderPage(currentPage);
+            const img = document.createElement('img');
+            img.src = canvas.toDataURL('image/png');
+            img.style.width = '100%';
+            
+            // Clear and update image container
+            imgContainer.innerHTML = '';
+            imgContainer.appendChild(img);
+            
+            // Update navigation state
+            prevBtn.disabled = currentPageIndex === 0;
+            nextBtn.disabled = currentPageIndex === availablePages.length - 1;
+            pageInfo.textContent = `Page ${currentPage} of ${pdf.numPages} (${availablePages.length} remaining)`;
+            
+            // Update field buttons to work with current page
+            updateFieldButtons(pdfName, currentPage, img);
+        }
+
+        prevBtn.onclick = () => {
+            if (currentPageIndex > 0) {
+                updatePreview(currentPageIndex - 1);
+            }
+        }
+
+        nextBtn.onclick = () => {
+            if (currentPageIndex < availablePages.length - 1) {
+                updatePreview(currentPageIndex + 1);
+            }
+        }
 
         const buttonContainer = document.createElement('div')
         buttonContainer.className = 'field-buttons'
 
-        const dateBtn = createFieldButton('Date', () => addField(pdfName, pageNum, 'date', img))
-        const nameBtn = createFieldButton('Name', () => addField(pdfName, pageNum, 'name', img))
-        const signatureBtn = createFieldButton('Signature', () => addField(pdfName, pageNum, 'signature', img))
-
-        buttonContainer.appendChild(dateBtn)
-        buttonContainer.appendChild(nameBtn)
-        buttonContainer.appendChild(signatureBtn)
+        const updateFieldButtons = (pdfName, pageNum, img) => {
+            buttonContainer.innerHTML = ''
+            const dateBtn = createFieldButton('Date', () => addField(pdfName, pageNum, 'date', img))
+            const nameBtn = createFieldButton('Name', () => addField(pdfName, pageNum, 'name', img))
+            const signatureBtn = createFieldButton('Signature', () => addField(pdfName, pageNum, 'signature', img))
+            
+            buttonContainer.appendChild(dateBtn)
+            buttonContainer.appendChild(nameBtn)
+            buttonContainer.appendChild(signatureBtn)
+        }
 
         modalContent.appendChild(closeBtn)
-        modalContent.appendChild(img)
+        modalContent.appendChild(navContainer)
+        modalContent.appendChild(imgContainer)
         modalContent.appendChild(buttonContainer)
         modal.appendChild(modalContent)
 
         document.body.appendChild(modal)
         modal.style.display = 'block'
+        
+        // Initial render
+        await updatePreview(currentPageIndex);
+
     } catch (error) {
         console.error('Error rendering full page:', error)
     }

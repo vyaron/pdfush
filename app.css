@@ -185,6 +185,33 @@ footer {
     right: 65px;
 }
 
+.nav-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.nav-buttons button {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+}
+
+.nav-buttons button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-info {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.img-container {
+    margin: 1rem 0;
+}
+
 @keyframes bounce {
 
     0%,
@@ -196,3 +223,4 @@ footer {
         transform: translateY(-20px);
     }
 }
+
