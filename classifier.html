@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDFush</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <link rel="stylesheet" href="css/classifier.css">
+
+</head>
+
+<body>
+    <header>
+        <h1>
+            PDFush Classifier
+            <img src="pdf.png" />
+        </h1>
+        <h2>Split a large PDF to separate documents</h2>
+
+    </header>
+    <div id="drop-area">
+        <p>Drag and drop a PDF , or click to select</p>
+        <input type="file" id="fileElem" accept="application/pdf" style="display:none">
+    </div>
+    <button class="btn-classify" disabled>Classify PDF</button>
+    <div id="preview-container"></div>
+
+    <footer>
+        Multiple Docs Page-by-Page Preview with Drag and Drop
+    </footer>
+    <script src="js/classifier.js"></script>
+</body>
+
+</html>
