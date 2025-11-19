@@ -135,7 +135,10 @@ async function displayClassificationResults(classifications) {
     previewContainer.innerHTML = `
         <div class="success-message show">
             <strong>✓ Analysis Complete!</strong> Found ${classifications.length} documents.
-            <button class="btn-download-all" onclick="downloadAllDocuments()">⬇ Download All as ZIP</button>
+            <div>
+                <button class="btn-download-all" onclick="downloadAllDocuments()">⬇ Download All as ZIP</button>
+                <button class="btn-download-combined" onclick="downloadCombinedPDF()">⬇ Download Combined PDF</button>
+            </div>
         </div>
         <div class="documents-list"></div>
     `
@@ -150,6 +153,10 @@ async function displayClassificationResults(classifications) {
         const docItem = await createDocumentItem(doc, index)
         documentsList.appendChild(docItem)
     }
+
+    // Ensure counts and page-range labels reflect the current DOM state
+    updateDocumentPageCounts()
+    updateDocumentPageRanges()
 }
 
 async function createDocumentItem(doc, index) {
@@ -430,6 +437,7 @@ function dropPage(e) {
     }
     
     updateDocumentPageCounts()
+    updateDocumentPageRanges()
     
     document.querySelectorAll('.over').forEach(el => el.classList.remove('over'))
 }
@@ -441,6 +449,43 @@ function updateDocumentPageCounts() {
         const pageCountElement = item.querySelector('.page-count')
         if (pageCountElement) {
             pageCountElement.textContent = `(${pageCount} page${pageCount !== 1 ? 's' : ''})`
+        }
+    })
+}
+
+// Recalculate and update the page range/title for each document section
+function updateDocumentPageRanges() {
+    const documentItems = previewContainer.querySelectorAll('.document-item')
+    documentItems.forEach(item => {
+        const pageContainers = Array.from(item.querySelectorAll('.page-container'))
+        const docPagesEl = item.querySelector('.document-pages')
+
+        if (!docPagesEl) return
+
+        if (pageContainers.length === 0) {
+            docPagesEl.textContent = 'Pages'
+            return
+        }
+
+        // Collect and sort numeric page numbers
+        const pages = pageContainers.map(pc => parseInt(pc.dataset.pageNum, 10)).filter(n => !isNaN(n)).sort((a, b) => a - b)
+
+        if (pages.length === 1) {
+            docPagesEl.textContent = `Page ${pages[0]}`
+            return
+        }
+
+        // Check if pages form a continuous range
+        const min = pages[0]
+        const max = pages[pages.length - 1]
+        const isContinuous = (max - min + 1) === pages.length && pages.every((p, i) => p === min + i)
+
+        if (isContinuous) {
+            docPagesEl.textContent = `Pages ${min}-${max}`
+        } else {
+            // Non-contiguous: show comma-separated list but limit length if very long
+            const text = pages.length <= 6 ? pages.join(',') : `${pages.slice(0, 5).join(',')}…`
+            docPagesEl.textContent = `Pages ${text}`
         }
     })
 }
@@ -575,5 +620,47 @@ async function downloadAllDocuments() {
     } catch (error) {
         console.error('Error downloading all documents:', error)
         alert('Error creating ZIP file. Please try again.')
+    }
+}
+
+async function downloadCombinedPDF() {
+    try {
+        const documentItems = previewContainer.querySelectorAll('.document-item')
+        if (documentItems.length === 0) {
+            alert('No documents to download.')
+            return
+        }
+
+        // Load original PDF once
+        const arrayBuffer = await uploadedFile.arrayBuffer()
+        const pdfLibDoc = await PDFLib.PDFDocument.load(arrayBuffer)
+
+        // Create a single combined PDF
+        const combinedPdf = await PDFLib.PDFDocument.create()
+
+        for (const docItem of documentItems) {
+            const pageContainers = Array.from(docItem.querySelectorAll('.page-container'))
+            if (pageContainers.length === 0) continue
+
+            const pageIndices = pageContainers.map(container => parseInt(container.dataset.pageNum) - 1)
+            const copiedPages = await combinedPdf.copyPages(pdfLibDoc, pageIndices)
+            copiedPages.forEach(p => combinedPdf.addPage(p))
+        }
+
+        const pdfBytes = await combinedPdf.save()
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'combined_classified.pdf'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+
+        console.log('Downloaded combined PDF')
+    } catch (error) {
+        console.error('Error creating combined PDF:', error)
+        alert('Error creating combined PDF. Please try again.')
     }
 }
