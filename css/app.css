@@ -232,7 +232,7 @@ footer {
     background-color: #fff;
     border-color: #007bff;
     outline: none;
-    box-shadow: 0 0 0 2px rgba(0,123,255,.25);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, .25);
 }
 
 .page-count {
@@ -255,6 +255,16 @@ footer {
     flex: 1;
 }
 
+footer nav {
+    margin-top: 10px;
+
+    a {
+        color: #fff;
+        text-decoration: none;
+        margin: 0 10px;
+    }
+}
+
 @keyframes bounce {
 
     0%,
@@ -266,4 +276,3 @@ footer {
         transform: translateY(-20px);
     }
 }
-
