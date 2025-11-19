@@ -149,6 +149,14 @@ footer {
     border-color: #ff1b0e;
 }
 
+.document-item.collapsed {
+    cursor: move;
+}
+
+.document-item.dragging {
+    opacity: 0.5;
+}
+
 .document-header {
     display: flex;
     justify-content: space-between;
@@ -156,11 +164,54 @@ footer {
     margin-bottom: 10px;
 }
 
+.title-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.collapse-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2em;
+    padding: 4px 8px;
+    color: #666;
+    transition: color 0.3s;
+    flex-shrink: 0;
+}
+
+.collapse-button:hover {
+    color: #ff1b0e;
+}
+
 .document-title {
     font-size: 1.3em;
     font-weight: bold;
     color: #333;
     margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.document-title small {
+    display: inline-block;
+    font-size: 0.7em;
+    color: #666;
+    font-weight: normal;
+    white-space: normal;
+}
+
+.page-count {
+    color: #666;
+    font-size: 0.9em;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .document-info {
@@ -182,6 +233,45 @@ footer {
     font-style: italic;
 }
 
+/* Page Previews */
+.page-previews {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 10px;
+    margin-top: 15px;
+    min-height: 50px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+}
+
+.page-container {
+    position: relative;
+    display: inline-block;
+    cursor: move;
+    transition: transform 0.2s;
+}
+
+.page-container:hover {
+    transform: scale(1.05);
+}
+
+.page-container.dragging {
+    opacity: 0.5;
+}
+
+.page-container.over {
+    border: 2px dashed #ff1b0e;
+}
+
+.page-preview {
+    display: block;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
 .btn-download {
     background-color: #4CAF50;
     color: white;
@@ -194,6 +284,7 @@ footer {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-left: 20px;
 }
 
 .btn-download:hover {
@@ -220,10 +311,34 @@ footer {
     margin: 20px auto;
     max-width: 600px;
     display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
 }
 
 .success-message.show {
-    display: block;
+    display: flex;
+}
+
+.btn-download-all {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 0.95em;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.btn-download-all:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+.btn-download-all:active {
+    transform: translateY(0);
 }
 
 /* Animations */
