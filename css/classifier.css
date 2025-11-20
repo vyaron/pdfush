@@ -435,6 +435,21 @@ footer {
     margin-bottom: 8px;
 }
 
+.viewer-zoom-out,
+.viewer-zoom-in {
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.viewer-zoom-label {
+    min-width: 56px;
+    text-align: center;
+    font-weight: 600;
+}
+
 #.viewer-canvas-wrap {
     width: 100%;
     display: flex;

@@ -145,11 +145,14 @@ async function displayClassificationResults(classifications) {
                 <div class="documents-list"></div>
             </div>
             <div class="pdf-viewer">
-                <div class="viewer-controls">
-                    <button class="viewer-prev">◀</button>
-                    <span class="viewer-pagenum">1 / 1</span>
-                    <button class="viewer-next">▶</button>
-                </div>
+                    <div class="viewer-controls">
+                        <button class="viewer-prev">◀</button>
+                        <button class="viewer-zoom-out">−</button>
+                        <span class="viewer-zoom-label">100%</span>
+                        <button class="viewer-zoom-in">+</button>
+                        <span class="viewer-pagenum">1 / 1</span>
+                        <button class="viewer-next">▶</button>
+                    </div>
                 <div class="viewer-canvas-wrap">
                     <canvas id="viewer-canvas"></canvas>
                 </div>
@@ -161,27 +164,41 @@ async function displayClassificationResults(classifications) {
     const viewerCanvas = previewContainer.querySelector('#viewer-canvas')
     const viewerPrevBtn = previewContainer.querySelector('.viewer-prev')
     const viewerNextBtn = previewContainer.querySelector('.viewer-next')
+    const viewerZoomOutBtn = previewContainer.querySelector('.viewer-zoom-out')
+    const viewerZoomInBtn = previewContainer.querySelector('.viewer-zoom-in')
+    const viewerZoomLabel = previewContainer.querySelector('.viewer-zoom-label')
     const viewerPageNumLabel = previewContainer.querySelector('.viewer-pagenum')
     
     // Viewer state
     let viewerCurrentPage = 1
     let viewerTotalPages = pdfDoc ? pdfDoc.numPages : 0
+    // viewerScale is a multiplier applied to the fit-to-width scale (1 = fit-to-width)
+    let viewerScale = 1
 
     const renderViewerPage = async (pageNum) => {
         if (!pdfDoc) return
         pageNum = Math.max(1, Math.min(pageNum, pdfDoc.numPages))
         const page = await pdfDoc.getPage(pageNum)
-        const viewport = page.getViewport({ scale: 1.25 })
+        const viewport = page.getViewport({ scale: 1 })
         const canvas = viewerCanvas
         const context = canvas.getContext('2d')
-        canvas.width = Math.min(viewport.width, Math.floor(window.innerWidth * 0.6))
-        const scale = canvas.width / viewport.width * viewport.scale
-        const scaledViewport = page.getViewport({ scale: viewport.scale * (canvas.width / viewport.width) })
-        canvas.height = scaledViewport.height
+
+        // Compute fit-to-width scale based on available viewer area (~60% of window width)
+        const maxWidth = Math.floor(window.innerWidth * 0.6)
+        const fitScale = Math.min(1, maxWidth / viewport.width)
+
+        // final scale = fitScale * viewerScale
+        const finalScale = fitScale * viewerScale
+
+        const scaledViewport = page.getViewport({ scale: finalScale })
+        canvas.width = Math.floor(scaledViewport.width)
+        canvas.height = Math.floor(scaledViewport.height)
         await page.render({ canvasContext: context, viewport: scaledViewport }).promise
         viewerCurrentPage = pageNum
         viewerPageNumLabel.textContent = `${viewerCurrentPage} / ${viewerTotalPages}`
         highlightActiveDocAndPage(viewerCurrentPage)
+        // Update zoom label to percent of fit-scale
+        if (viewerZoomLabel) viewerZoomLabel.textContent = `${Math.round(viewerScale * 100)}%`
     }
 
     const goToPage = async (pageNum) => {
@@ -193,6 +210,21 @@ async function displayClassificationResults(classifications) {
     })
     viewerNextBtn.addEventListener('click', () => {
         if (viewerCurrentPage < viewerTotalPages) goToPage(viewerCurrentPage + 1)
+    })
+
+    // Zoom controls
+    if (viewerZoomOutBtn) viewerZoomOutBtn.addEventListener('click', async () => {
+        viewerScale = Math.max(0.2, viewerScale / 1.2)
+        await renderViewerPage(viewerCurrentPage)
+    })
+    if (viewerZoomInBtn) viewerZoomInBtn.addEventListener('click', async () => {
+        viewerScale = Math.min(3, viewerScale * 1.2)
+        await renderViewerPage(viewerCurrentPage)
+    })
+
+    // Re-render on window resize so fit scale recalculates
+    window.addEventListener('resize', () => {
+        renderViewerPage(viewerCurrentPage)
     })
     
     // Add drop listeners to the documents list for section reordering
