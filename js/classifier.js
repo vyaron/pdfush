@@ -119,7 +119,7 @@ function showLoading() {
     previewContainer.innerHTML = `
         <div class="loading-container show">
             <div class="spinner"></div>
-            <div class="loading-text">Analyzing PDF...</div>
+            <div class="loading-text">Classifying PDF...</div>
         </div>
     `
 }
@@ -134,7 +134,7 @@ function hideLoading() {
 async function displayClassificationResults(classifications) {
     previewContainer.innerHTML = `
         <div class="success-message show">
-            <strong>✓ Analysis Complete!</strong> Found ${classifications.length} docs.
+            <strong>✓ Classification Complete!</strong> Found ${classifications.length} docs.
             <div>
                 <button class="btn-download-all" onclick="downloadAllDocuments()">⬇ Download All as ZIP</button>
                 <button class="btn-download-combined" onclick="downloadCombinedPDF()">⬇ Download Combined PDF</button>
