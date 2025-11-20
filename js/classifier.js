@@ -623,12 +623,27 @@ function highlightActiveDocAndPage(currentPage) {
 
     // Smoothly scroll the active doc into view if found
     if (activeFound) {
-        // scrollIntoView will target the nearest scrollable ancestor (documents panel)
-        try {
-            activeFound.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
-        } catch (e) {
-            // Fall back to instant scroll if smooth isn't supported
-            activeFound.scrollIntoView()
+        const docsPanel = previewContainer.querySelector('.documents-panel')
+        if (docsPanel) {
+            // Calculate the item's top relative to the scrollable panel
+            const itemRect = activeFound.getBoundingClientRect()
+            const panelRect = docsPanel.getBoundingClientRect()
+            const relativeTop = itemRect.top - panelRect.top + docsPanel.scrollTop
+
+            // Target: position the item's top slightly below the top of the panel
+            // This ensures the doc title (at the top of the item) is visible without needing manual scroll
+            const target = Math.max(0, relativeTop - 20)
+
+            // Use scrollTo with smooth behavior when available
+            try {
+                docsPanel.scrollTo({ top: target, left: 0, behavior: 'smooth' })
+            } catch (e) {
+                // Fallback
+                docsPanel.scrollTop = target
+            }
+        } else {
+            // If no docsPanel found, fall back to element-level scrollIntoView
+            try { activeFound.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }) } catch (e) { activeFound.scrollIntoView() }
         }
     }
 }
