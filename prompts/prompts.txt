@@ -1,0 +1,32 @@
+Recorded user prompts
+------------------------
+
+1) "I'm adding a new feature for the app. it is the classifier page. the user drag a large PDF file - Container File (CFile). Show a loading indicator: Analying PDF… for 5 seconds. Get from a local service (hard-coded) a docs list. Split the PDF as directed by the pdfClassifierService. Name each doc by the main docType. Allow downloading a single doc." 
+Note to use the word doc (and not document) throughout my code
+
+2) "I don't use semicolons in JS"  
+
+3) "docType for every doc should actually be an array"  
+
+4) "sample PDF has 15 pages, every 3 pages should be separate doc"  
+
+5) "Cannot read properties of undefined (reading 'drop')" (debugging prompt; fix DOM safety checks)  
+
+6) "After classification, show collapsible section for each doc, with pages preview, and option to drag and drop entire section when collapsed and pages individually (similar to index.html)"  
+
+7) "When dragging a page from doc1 to doc2 the display looks ok, but when downloading, both docs have 4 pages" (fix downloads to use live DOM order)  
+
+8) "Download all docs with a single button (zip?)"  
+
+9) "Next to the Download All as ZIP button add a button that downloads a single PDF (by the new order of pages and docs created by the user)"  
+
+10) "Spacing: the 2 buttons are too close"  
+
+11) "the buttons overflow the space (See attachments)"  
+
+12) "when dragging a page to another doc, we need to update the Pages title on that section (such as: Pages 1-3 => Pages)"  
+
+13) "On the doc list, show also the issuer info and the ESNs if exist"  
+
+14) "please document all my previous and future prompts to the file prompts/prompts.txt"  
+

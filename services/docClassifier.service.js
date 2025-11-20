@@ -20,17 +20,23 @@ const pdfClassifierService = {
      * - pages: Array of page numbers
      * - description: Description of the document content
      */
-    async classifyDocument(file) {
+    async classifyDoc(file) {
         // Simulate processing time
         await new Promise(resolve => setTimeout(resolve, 5000))
-        
+
         // Hard-coded classification results
         // 15 pages split into 5 documents of 3 pages each
         return [
             {
                 docTypes: [DOC_TYPES.ENGINE_DELIVERY_DOC],
                 pages: [1, 2, 3],
-                description: "Engine delivery documentation"
+                description: "Engine delivery documentation",
+                issuer: {
+                    type: 'Operator',
+                    name: 'ACME Engines',
+                    at: '21-Jun-2020'
+                },
+                ESNs: ['ENG123456', 'ENG654321']
             },
             {
                 docTypes: [DOC_TYPES.OP_ON_OFF_LOG, DOC_TYPES.ENGINE_DELIVERY_DOC],
@@ -40,17 +46,37 @@ const pdfClassifierService = {
             {
                 docTypes: [DOC_TYPES.PART_REMOVAL_TAG],
                 pages: [7, 8, 9],
-                description: "Part removal tag documentation"
+                description: "Part removal tag documentation",
+                issuer: {
+                    type: 'Shop',
+                    name: 'Best Repairs Ltd.',
+                    at: '16-Aug-2021'
+                },
+                ESNs: []
             },
             {
                 docTypes: [DOC_TYPES.ENGINE_DELIVERY_DOC, DOC_TYPES.PART_REMOVAL_TAG],
                 pages: [10, 11, 12],
-                description: "Engine delivery documentation with part removal tag"
+                description: "Engine delivery documentation with part removal tag",
+                issuer: {
+                    type: 'OEM',
+                    name: 'Global Engines Inc.',
+                    at: '11-Feb-2022'
+                },
+                ESNs: ['ENG123456']
+
             },
             {
                 docTypes: [DOC_TYPES.OP_ON_OFF_LOG],
                 pages: [13, 14, 15],
-                description: "Operation on/off log"
+                description: "Operation on/off log",
+                issuer: {
+                    type: 'OEM',
+                    name: 'Global Engines Inc.',
+                    at: '14-Mar-2023'
+                },
+                ESNs: ['ENG123456']
+
             }
         ]
     },
@@ -71,15 +97,15 @@ const pdfClassifierService = {
      * @param {Array} docTypes - Array of document type strings
      * @returns {string} Display name with suffix if multiple types
      */
-    getDocumentName(docTypes) {
+    getDocName(docTypes) {
         if (!docTypes || docTypes.length === 0) return 'Unknown'
-        
+
         const primaryType = docTypes[0]
-        
+
         if (docTypes.length === 1) {
             return primaryType
         }
-        
+
         const additionalCount = docTypes.length - 1
         return `${primaryType}_and_${additionalCount}_more`
     }

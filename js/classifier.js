@@ -99,7 +99,7 @@ async function classifyPDF() {
         pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
 
         // Get classification results from service (waits 5 seconds)
-        const classifications = await pdfClassifierService.classifyDocument(uploadedFile)
+        const classifications = await pdfClassifierService.classifyDoc(uploadedFile)
 
         // Hide loading indicator
         hideLoading()
@@ -167,15 +167,34 @@ async function createDocumentItem(doc, index) {
     const pageRangeText = doc.pages.length === 1 
         ? `Page ${doc.pages[0]}` 
         : `Pages ${doc.pages[0]}-${doc.pages[doc.pages.length - 1]}`
-    
-    // Get document name using the service helper
-    const documentName = pdfClassifierService.getDocumentName(doc.docTypes)
-    
+
+    // Get document name using the service helper (fall back if helper name differs)
+    const documentName = (pdfClassifierService.getDocumentName || pdfClassifierService.getDocName)
+        ? (pdfClassifierService.getDocumentName ? pdfClassifierService.getDocumentName(doc.docTypes) : pdfClassifierService.getDocName(doc.docTypes))
+        : 'Doc'
+
     // Create a display of all doc types
-    const docTypesDisplay = doc.docTypes.length > 1 
+    const docTypesDisplay = doc.docTypes && doc.docTypes.length > 1 
         ? `<small style="color: #666; font-weight: normal;">(${doc.docTypes.join(', ')})</small>`
         : ''
-    
+
+    // Build issuer HTML if present
+    let issuerHtml = ''
+    if (doc.issuer) {
+        const issuerParts = []
+        if (doc.issuer.type) issuerParts.push(doc.issuer.type)
+        if (doc.issuer.name) issuerParts.push(doc.issuer.name)
+        if (doc.issuer.at) issuerParts.push(`at ${doc.issuer.at}`)
+        issuerHtml = `<div class="document-issuer">Issuer: ${issuerParts.join(' — ')}</div>`
+    }
+
+    // Build ESNs HTML if present and non-empty
+    let esnsHtml = ''
+    if (Array.isArray(doc.ESNs) && doc.ESNs.length > 0) {
+        const esnList = doc.ESNs.join(', ')
+        esnsHtml = `<div class="document-esns">ESNs: ${esnList}</div>`
+    }
+
     item.innerHTML = `
         <div class="document-header">
             <div class="title-container">
@@ -187,7 +206,9 @@ async function createDocumentItem(doc, index) {
         </div>
         <div class="document-info">
             <div class="document-pages">${pageRangeText}</div>
-            <div class="document-description">${doc.description}</div>
+            <div class="document-description">${doc.description || ''}</div>
+            ${issuerHtml}
+            ${esnsHtml}
         </div>
         <div class="page-previews"></div>
     `
@@ -495,7 +516,7 @@ async function downloadDocumentByIndex(docIndex) {
         // Find the document item
         const docItem = document.querySelector(`.document-item[data-doc-index="${docIndex}"]`)
         if (!docItem) {
-            alert('Document not found.')
+            alert('Doc not found.')
             return
         }
         
@@ -503,7 +524,7 @@ async function downloadDocumentByIndex(docIndex) {
         const pageContainers = Array.from(docItem.querySelectorAll('.page-container'))
         
         if (pageContainers.length === 0) {
-            alert('No pages in this document.')
+            alert('No pages in this doc.')
             return
         }
         
@@ -529,7 +550,7 @@ async function downloadDocumentByIndex(docIndex) {
         
         // Get document name from title
         const titleElement = docItem.querySelector('.document-title')
-        let filename = 'document'
+        let filename = 'doc'
         if (titleElement) {
             // Extract just the main name, not the small text
             const titleText = titleElement.childNodes[0].textContent.trim()
@@ -549,7 +570,7 @@ async function downloadDocumentByIndex(docIndex) {
         
         console.log(`Downloaded: ${filename}.pdf (${pageIndices.length} pages)`)
     } catch (error) {
-        console.error('Error downloading document:', error)
+        console.error('Error downloading doc:', error)
         alert('Error creating PDF. Please try again.')
     }
 }
@@ -559,7 +580,7 @@ async function downloadAllDocuments() {
         const documentItems = previewContainer.querySelectorAll('.document-item')
         
         if (documentItems.length === 0) {
-            alert('No documents to download.')
+            alert('No docs to download.')
             return
         }
         
@@ -590,7 +611,7 @@ async function downloadAllDocuments() {
             
             // Get document name
             const titleElement = docItem.querySelector('.document-title')
-            let filename = 'document'
+            let filename = 'doc'
             if (titleElement) {
                 const titleText = titleElement.childNodes[0].textContent.trim()
                 filename = titleText || 'document'
@@ -610,13 +631,13 @@ async function downloadAllDocuments() {
         const url = URL.createObjectURL(zipBlob)
         const a = document.createElement('a')
         a.href = url
-        a.download = 'classified_documents.zip'
+        a.download = 'classified_docs.zip'
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
         
-        console.log(`Downloaded ZIP with ${documentItems.length} documents`)
+        console.log(`Downloaded ZIP with ${documentItems.length} docs`)
     } catch (error) {
         console.error('Error downloading all documents:', error)
         alert('Error creating ZIP file. Please try again.')
@@ -627,7 +648,7 @@ async function downloadCombinedPDF() {
     try {
         const documentItems = previewContainer.querySelectorAll('.document-item')
         if (documentItems.length === 0) {
-            alert('No documents to download.')
+            alert('No docs to download.')
             return
         }
 
@@ -652,13 +673,13 @@ async function downloadCombinedPDF() {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = 'combined_classified.pdf'
+        a.download = 'combined_classified_docs.pdf'
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
 
-        console.log('Downloaded combined PDF')
+        console.log('Downloaded combined docs PDF')
     } catch (error) {
         console.error('Error creating combined PDF:', error)
         alert('Error creating combined PDF. Please try again.')
