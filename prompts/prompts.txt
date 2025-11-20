@@ -1,6 +1,8 @@
 Recorded user prompts
 ------------------------
 
+Use 100% of screen width
+
 1) "I'm adding a new feature for the app. it is the classifier page. the user drag a large PDF file - Container File (CFile). Show a loading indicator: Analying PDF… for 5 seconds. Get from a local service (hard-coded) a docs list. Split the PDF as directed by the pdfClassifierService. Name each doc by the main docType. Allow downloading a single doc." 
 Note to use the word doc (and not document) throughout my code
 
@@ -29,4 +31,11 @@ Note to use the word doc (and not document) throughout my code
 13) "On the doc list, show also the issuer info and the ESNs if exist"  
 
 14) "please document all my previous and future prompts to the file prompts/prompts.txt"  
+
+
+Add a PDF viewer, side by side to the list of Docs.
+When a doc is clicked, navigate in the full PDF to that doc's first page.
+When clicking a page-preview - navigate to that page.
+In the PDF viewer, when moving though the full PDF, highlite the current doc and the current page on the doc-list, also scroll that doc into view
+
 

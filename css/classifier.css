@@ -41,13 +41,14 @@ footer {
 #drop-area {
     border: 2px dashed #ccc;
     border-radius: 20px;
-    width: 480px;
-    max-width: 90%;
+    width: 100%;
+    max-width: none;
     padding: 40px 20px;
     text-align: center;
-    margin: 20px auto;
+    margin: 20px 0;
     cursor: pointer;
     transition: all 0.3s ease;
+    box-sizing: border-box;
 }
 
 #drop-area:hover {
@@ -124,9 +125,11 @@ footer {
 
 /* Document List */
 #preview-container {
-    max-width: 900px;
-    margin: 40px auto;
+    width: 100%;
+    max-width: none;
+    margin: 20px 0;
     padding: 0 20px;
+    box-sizing: border-box;
 }
 
 .documents-list {
@@ -398,6 +401,69 @@ footer {
 }
 
 /* Animations */
+
+/* Side-by-side viewer layout */
+.results-wrapper {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    margin-top: 20px;
+}
+
+.documents-panel {
+    flex: 0 0 42%;
+    max-height: 72vh;
+    overflow: auto;
+}
+
+.pdf-viewer {
+    flex: 1 1 58%;
+    background: #fff;
+    border: 1px solid #e6e6e6;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.viewer-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+#.viewer-canvas-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+#viewer-canvas {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    max-width: 100%;
+    height: auto;
+}
+
+/* Active highlights */
+.document-item.active-doc {
+    border-color: #007bff;
+    box-shadow: 0 6px 16px rgba(0,123,255,0.08);
+}
+
+.page-container.active-page {
+    outline: 3px solid rgba(0,123,255,0.14);
+    transform: none !important;
+}
+
+@media (max-width: 900px) {
+    .results-wrapper { flex-direction: column }
+    .documents-panel { flex: 1 1 100%; max-height: none }
+    .pdf-viewer { order: -1 }
+}
 @keyframes bounce {
     0%, 100% {
         transform: translateY(0);

@@ -134,16 +134,66 @@ function hideLoading() {
 async function displayClassificationResults(classifications) {
     previewContainer.innerHTML = `
         <div class="success-message show">
-            <strong>✓ Analysis Complete!</strong> Found ${classifications.length} documents.
+            <strong>✓ Analysis Complete!</strong> Found ${classifications.length} docs.
             <div>
                 <button class="btn-download-all" onclick="downloadAllDocuments()">⬇ Download All as ZIP</button>
                 <button class="btn-download-combined" onclick="downloadCombinedPDF()">⬇ Download Combined PDF</button>
             </div>
         </div>
-        <div class="documents-list"></div>
+        <div class="results-wrapper">
+            <div class="documents-panel">
+                <div class="documents-list"></div>
+            </div>
+            <div class="pdf-viewer">
+                <div class="viewer-controls">
+                    <button class="viewer-prev">◀</button>
+                    <span class="viewer-pagenum">1 / 1</span>
+                    <button class="viewer-next">▶</button>
+                </div>
+                <div class="viewer-canvas-wrap">
+                    <canvas id="viewer-canvas"></canvas>
+                </div>
+            </div>
+        </div>
     `
 
     const documentsList = previewContainer.querySelector('.documents-list')
+    const viewerCanvas = previewContainer.querySelector('#viewer-canvas')
+    const viewerPrevBtn = previewContainer.querySelector('.viewer-prev')
+    const viewerNextBtn = previewContainer.querySelector('.viewer-next')
+    const viewerPageNumLabel = previewContainer.querySelector('.viewer-pagenum')
+    
+    // Viewer state
+    let viewerCurrentPage = 1
+    let viewerTotalPages = pdfDoc ? pdfDoc.numPages : 0
+
+    const renderViewerPage = async (pageNum) => {
+        if (!pdfDoc) return
+        pageNum = Math.max(1, Math.min(pageNum, pdfDoc.numPages))
+        const page = await pdfDoc.getPage(pageNum)
+        const viewport = page.getViewport({ scale: 1.25 })
+        const canvas = viewerCanvas
+        const context = canvas.getContext('2d')
+        canvas.width = Math.min(viewport.width, Math.floor(window.innerWidth * 0.6))
+        const scale = canvas.width / viewport.width * viewport.scale
+        const scaledViewport = page.getViewport({ scale: viewport.scale * (canvas.width / viewport.width) })
+        canvas.height = scaledViewport.height
+        await page.render({ canvasContext: context, viewport: scaledViewport }).promise
+        viewerCurrentPage = pageNum
+        viewerPageNumLabel.textContent = `${viewerCurrentPage} / ${viewerTotalPages}`
+        highlightActiveDocAndPage(viewerCurrentPage)
+    }
+
+    const goToPage = async (pageNum) => {
+        await renderViewerPage(pageNum)
+    }
+
+    viewerPrevBtn.addEventListener('click', () => {
+        if (viewerCurrentPage > 1) goToPage(viewerCurrentPage - 1)
+    })
+    viewerNextBtn.addEventListener('click', () => {
+        if (viewerCurrentPage < viewerTotalPages) goToPage(viewerCurrentPage + 1)
+    })
     
     // Add drop listeners to the documents list for section reordering
     addDocumentsListDropListeners(documentsList)
@@ -157,6 +207,39 @@ async function displayClassificationResults(classifications) {
     // Ensure counts and page-range labels reflect the current DOM state
     updateDocumentPageCounts()
     updateDocumentPageRanges()
+
+    // Render first page in viewer
+    viewerTotalPages = pdfDoc ? pdfDoc.numPages : 0
+    viewerPageNumLabel.textContent = `1 / ${viewerTotalPages}`
+    if (viewerTotalPages > 0) {
+        // render first page
+        renderViewerPage(1)
+    }
+
+    // Expose navigation helper for clicks
+    // Attach click handlers: clicking a doc header navigates to its first page
+    const docItems = documentsList.querySelectorAll('.document-item')
+    docItems.forEach(item => {
+        const pages = Array.from(item.querySelectorAll('.page-container')).map(pc => parseInt(pc.dataset.pageNum, 10))
+        if (pages.length > 0) {
+            const firstPage = pages[0]
+            const titleArea = item.querySelector('.title-container')
+            if (titleArea) {
+                titleArea.style.cursor = 'pointer'
+                titleArea.addEventListener('click', () => goToPage(firstPage))
+            }
+            // Add click on each preview to navigate
+            const previewContainers = item.querySelectorAll('.page-container')
+            previewContainers.forEach(pc => {
+                pc.addEventListener('click', (e) => {
+                    // avoid clicks when dragging
+                    if (pc.classList.contains('dragging')) return
+                    const pnum = parseInt(pc.dataset.pageNum, 10)
+                    if (!isNaN(pnum)) goToPage(pnum)
+                })
+            })
+        }
+    })
 }
 
 async function createDocumentItem(doc, index) {
@@ -509,6 +592,45 @@ function updateDocumentPageRanges() {
             docPagesEl.textContent = `Pages ${text}`
         }
     })
+}
+
+// Highlight the active doc and page based on viewer page
+function highlightActiveDocAndPage(currentPage) {
+    const documentItems = Array.from(previewContainer.querySelectorAll('.document-item'))
+
+    // Find the first doc that contains the current page
+    let activeFound = null
+    for (const item of documentItems) {
+        const pageContainers = Array.from(item.querySelectorAll('.page-container'))
+        const pages = pageContainers.map(pc => parseInt(pc.dataset.pageNum, 10)).filter(n => !isNaN(n))
+        const isActive = pages.includes(currentPage)
+        if (isActive && !activeFound) activeFound = item
+        if (isActive) {
+            item.classList.add('active-doc')
+        } else {
+            item.classList.remove('active-doc')
+        }
+        // highlight specific page preview
+        pageContainers.forEach(pc => {
+            const pnum = parseInt(pc.dataset.pageNum, 10)
+            if (pnum === currentPage) {
+                pc.classList.add('active-page')
+            } else {
+                pc.classList.remove('active-page')
+            }
+        })
+    }
+
+    // Smoothly scroll the active doc into view if found
+    if (activeFound) {
+        // scrollIntoView will target the nearest scrollable ancestor (documents panel)
+        try {
+            activeFound.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
+        } catch (e) {
+            // Fall back to instant scroll if smooth isn't supported
+            activeFound.scrollIntoView()
+        }
+    }
 }
 
 async function downloadDocumentByIndex(docIndex) {
